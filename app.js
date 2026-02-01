@@ -6,7 +6,7 @@
 class AutomationDashboard {
     constructor() {
         this.apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-            ? 'http://localhost:3000' 
+            ? 'http://localhost:3001' 
             : 'https://api.openclaw.dev';
         this.jobs = [];
         this.lastUpdate = null;
@@ -25,7 +25,10 @@ class AutomationDashboard {
     bindEvents() {
         // Header buttons
         document.getElementById('refresh-btn').addEventListener('click', () => this.loadData());
-        document.getElementById('new-job-btn').addEventListener('click', () => this.showJobModal());
+        // New Job button disabled - use OpenClaw CLI instead
+        document.getElementById('new-job-btn').addEventListener('click', () => {
+            alert('Use OpenClaw CLI to create new jobs:\nopenclaw cron add');
+        });
         
         // Modal events
         document.querySelector('.close-btn').addEventListener('click', () => this.hideJobModal());
@@ -68,13 +71,14 @@ class AutomationDashboard {
     }
 
     async checkGatewayStatus() {
-        // Simulate checking gateway status
-        // In real implementation, this would be: GET /api/gateway/status
-        return new Promise(resolve => {
-            setTimeout(() => {
-                resolve(Math.random() > 0.2 ? 'online' : 'offline');
-            }, 500);
-        });
+        try {
+            const response = await fetch(`${this.apiBase}/api/gateway/status`);
+            const data = await response.json();
+            return data.status;
+        } catch (error) {
+            console.error('Gateway status check failed:', error);
+            return 'offline';
+        }
     }
 
     updateGatewayStatus(status) {
@@ -85,10 +89,11 @@ class AutomationDashboard {
 
     async loadCronJobs() {
         try {
-            // Simulate loading cron jobs
-            // In real implementation: GET /api/cron/jobs
-            const mockJobs = await this.getMockJobs();
-            this.jobs = mockJobs;
+            const response = await fetch(`${this.apiBase}/api/cron/jobs`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            this.jobs = await response.json();
             this.renderJobs();
             this.updateJobsCount();
             
@@ -98,45 +103,7 @@ class AutomationDashboard {
         }
     }
 
-    async getMockJobs() {
-        // Mock data for demonstration
-        return new Promise(resolve => {
-            setTimeout(() => {
-                resolve([
-                    {
-                        id: '1',
-                        name: 'Daily Backup',
-                        schedule: '0 2 * * *',
-                        command: 'openclaw backup --daily',
-                        description: 'Performs daily system backup',
-                        enabled: true,
-                        lastRun: '2024-01-15T02:00:00Z',
-                        nextRun: '2024-01-16T02:00:00Z'
-                    },
-                    {
-                        id: '2',
-                        name: 'Weather Update',
-                        schedule: '0 */6 * * *',
-                        command: 'openclaw weather --update',
-                        description: 'Updates weather information every 6 hours',
-                        enabled: true,
-                        lastRun: '2024-01-15T12:00:00Z',
-                        nextRun: '2024-01-15T18:00:00Z'
-                    },
-                    {
-                        id: '3',
-                        name: 'System Monitor',
-                        schedule: '*/15 * * * *',
-                        command: 'openclaw monitor --check-all',
-                        description: 'Monitors system health every 15 minutes',
-                        enabled: false,
-                        lastRun: '2024-01-15T14:45:00Z',
-                        nextRun: null
-                    }
-                ]);
-            }, 300);
-        });
-    }
+    // Removed getMockJobs - now using real OpenClaw API
 
     renderJobs() {
         const container = document.getElementById('jobs-container');
@@ -155,14 +122,11 @@ class AutomationDashboard {
                 <div class="job-header">
                     <div class="job-name">${this.escapeHtml(job.name)}</div>
                     <div class="job-actions">
-                        <button class="btn btn-primary" onclick="dashboard.editJob('${job.id}')">
-                            <i class="fas fa-edit"></i>
+                        <button class="btn btn-secondary" onclick="dashboard.runJob('${job.id}')" title="Run Now">
+                            <i class="fas fa-play"></i>
                         </button>
-                        <button class="btn btn-secondary" onclick="dashboard.toggleJob('${job.id}')">
+                        <button class="btn btn-secondary" onclick="dashboard.toggleJob('${job.id}')" title="${job.enabled ? 'Disable' : 'Enable'}">
                             <i class="fas fa-${job.enabled ? 'pause' : 'play'}"></i>
-                        </button>
-                        <button class="btn btn-danger" onclick="dashboard.deleteJob('${job.id}')">
-                            <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </div>
@@ -170,18 +134,17 @@ class AutomationDashboard {
                     <i class="fas fa-clock"></i> ${job.schedule}
                     ${job.enabled ? 
                         `<span style="color: var(--success-color); margin-left: 10px;">
-                            <i class="fas fa-circle" style="font-size: 8px;"></i> Active
+                            <i class="fas fa-circle" style="font-size: 8px;"></i> ${job.status}
                         </span>` :
                         `<span style="color: var(--danger-color); margin-left: 10px;">
-                            <i class="fas fa-circle" style="font-size: 8px;"></i> Disabled
+                            <i class="fas fa-circle" style="font-size: 8px;"></i> ${job.status}
                         </span>`
                     }
                 </div>
-                <div class="job-description">${this.escapeHtml(job.description || 'No description')}</div>
                 <div style="margin-top: 8px; font-size: 12px; color: var(--text-muted);">
-                    <div><strong>Command:</strong> <code>${this.escapeHtml(job.command)}</code></div>
-                    ${job.lastRun ? `<div><strong>Last run:</strong> ${this.formatDate(job.lastRun)}</div>` : ''}
-                    ${job.nextRun ? `<div><strong>Next run:</strong> ${this.formatDate(job.nextRun)}</div>` : ''}
+                    <div><strong>Agent:</strong> ${this.escapeHtml(job.agent)}</div>
+                    ${job.last && job.last !== '-' ? `<div><strong>Last run:</strong> ${job.last}</div>` : ''}
+                    ${job.next && job.next !== '-' ? `<div><strong>Next run:</strong> ${job.next}</div>` : ''}
                 </div>
             </div>
         `).join('');
@@ -304,17 +267,44 @@ class AutomationDashboard {
         if (!job) return;
 
         try {
-            // Simulate API call to toggle job
-            // In real implementation: POST /api/cron/jobs/{id}/toggle
-            job.enabled = !job.enabled;
-            this.renderJobs();
-            this.updateJobsCount();
+            const response = await fetch(`${this.apiBase}/api/cron/jobs/${id}/toggle`, {
+                method: 'POST'
+            });
             
-            this.addActivity(`${job.enabled ? 'Enabled' : 'Disabled'} job: ${job.name}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const result = await response.json();
+            this.addActivity(`${result.action === 'enable' ? 'Enabled' : 'Disabled'} job: ${job.name}`);
+            
+            // Reload jobs to get updated status
+            await this.loadCronJobs();
             
         } catch (error) {
             console.error('Error toggling job:', error);
             this.showError('Failed to toggle job');
+        }
+    }
+
+    async runJob(id) {
+        const job = this.jobs.find(j => j.id === id);
+        if (!job) return;
+
+        try {
+            const response = await fetch(`${this.apiBase}/api/cron/jobs/${id}/run`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            this.addActivity(`Triggered job: ${job.name}`);
+            
+        } catch (error) {
+            console.error('Error running job:', error);
+            this.showError('Failed to run job');
         }
     }
 
