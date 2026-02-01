@@ -5,9 +5,8 @@
 
 class AutomationDashboard {
     constructor() {
-        this.apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-            ? 'http://localhost:3001' 
-            : 'https://api.openclaw.dev';
+        this.apiBase = 'http://127.0.0.1:18789';
+        this.apiToken = '1f3c24e8659887020b2ab6312df8de1f12f351aa0a8f6f4b';
         this.jobs = [];
         this.lastUpdate = null;
         
@@ -72,9 +71,13 @@ class AutomationDashboard {
 
     async checkGatewayStatus() {
         try {
-            const response = await fetch(`${this.apiBase}/api/gateway/status`);
+            const response = await fetch(`${this.apiBase}/api/status`, {
+                headers: {
+                    'Authorization': `Bearer ${this.apiToken}`
+                }
+            });
             const data = await response.json();
-            return data.status;
+            return data.ok ? 'online' : 'offline';
         } catch (error) {
             console.error('Gateway status check failed:', error);
             return 'offline';
@@ -89,11 +92,22 @@ class AutomationDashboard {
 
     async loadCronJobs() {
         try {
-            const response = await fetch(`${this.apiBase}/api/cron/jobs`);
+            const response = await fetch(`${this.apiBase}/api/cron/list`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.apiToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'list',
+                    includeDisabled: true
+                })
+            });
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
-            this.jobs = await response.json();
+            const data = await response.json();
+            this.jobs = this.convertOpenClawJobs(data.jobs || []);
             this.renderJobs();
             this.updateJobsCount();
             
@@ -103,7 +117,43 @@ class AutomationDashboard {
         }
     }
 
-    // Removed getMockJobs - now using real OpenClaw API
+    convertOpenClawJobs(openclawJobs) {
+        return openclawJobs.map(job => {
+            let schedule = 'Unknown';
+            if (job.schedule) {
+                if (job.schedule.kind === 'cron') {
+                    schedule = job.schedule.expr;
+                } else if (job.schedule.kind === 'every') {
+                    const minutes = job.schedule.everyMs / (1000 * 60);
+                    schedule = `Every ${minutes}m`;
+                } else if (job.schedule.kind === 'at') {
+                    const date = new Date(job.schedule.atMs);
+                    schedule = `At ${date.toLocaleString()}`;
+                }
+            }
+
+            let nextRun = '-';
+            if (job.state && job.state.nextRunAtMs) {
+                nextRun = new Date(job.state.nextRunAtMs).toLocaleString();
+            }
+
+            let lastRun = '-';
+            if (job.state && job.state.lastRunAtMs) {
+                lastRun = new Date(job.state.lastRunAtMs).toLocaleString();
+            }
+
+            return {
+                id: job.id,
+                name: job.name || 'Unnamed Job',
+                schedule: schedule,
+                next: nextRun,
+                last: lastRun,
+                enabled: job.enabled !== false,
+                status: job.enabled !== false ? 'enabled' : 'disabled',
+                agent: job.agentId || 'main'
+            };
+        });
+    }
 
     renderJobs() {
         const container = document.getElementById('jobs-container');
@@ -267,16 +317,25 @@ class AutomationDashboard {
         if (!job) return;
 
         try {
-            const response = await fetch(`${this.apiBase}/api/cron/jobs/${id}/toggle`, {
-                method: 'POST'
+            const action = job.enabled ? 'remove' : 'update'; // OpenClaw uses remove/update instead of disable/enable
+            const response = await fetch(`${this.apiBase}/api/cron/${action}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.apiToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: action,
+                    jobId: id,
+                    patch: action === 'update' ? { enabled: !job.enabled } : undefined
+                })
             });
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
             
-            const result = await response.json();
-            this.addActivity(`${result.action === 'enable' ? 'Enabled' : 'Disabled'} job: ${job.name}`);
+            this.addActivity(`${!job.enabled ? 'Enabled' : 'Disabled'} job: ${job.name}`);
             
             // Reload jobs to get updated status
             await this.loadCronJobs();
@@ -292,8 +351,16 @@ class AutomationDashboard {
         if (!job) return;
 
         try {
-            const response = await fetch(`${this.apiBase}/api/cron/jobs/${id}/run`, {
-                method: 'POST'
+            const response = await fetch(`${this.apiBase}/api/cron/run`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.apiToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'run',
+                    jobId: id
+                })
             });
             
             if (!response.ok) {
