@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Zeek Kanban - David's Projects</title>
+  <meta http-equiv="refresh" content="30">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #121212; color: #e0e0e0; padding: 20px; min-height: 100vh; }
+    h1 { font-size: 24px; margin-bottom: 8px; color: #fff; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 20px; }
+    .board { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 20px; }
+    .column { background: #1e1e1e; border-radius: 8px; min-width: 280px; max-width: 300px; padding: 12px; flex-shrink: 0; }
+    .column-header { font-weight: 600; font-size: 14px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #333; display: flex; align-items: center; gap: 8px; }
+    .blocked .column-header { border-color: #e53935; color: #e53935; }
+    .progress .column-header { border-color: #fdd835; color: #fdd835; }
+    .next .column-header { border-color: #43a047; color: #43a047; }
+    .backlog .column-header { border-color: #757575; color: #757575; }
+    .done .column-header { border-color: #2196f3; color: #2196f3; }
+    .count { background: #333; padding: 2px 8px; border-radius: 10px; font-size: 11px; color: #aaa; }
+    .card { background: #2a2a2a; border-radius: 6px; padding: 12px; margin-bottom: 8px; font-size: 13px; border-left: 3px solid transparent; }
+    .card:hover { background: #333; }
+    .blocked .card { border-left-color: #e53935; }
+    .progress .card { border-left-color: #fdd835; }
+    .next .card { border-left-color: #43a047; }
+    .card-title { font-weight: 500; margin-bottom: 6px; line-height: 1.3; }
+    .card-meta { font-size: 11px; color: #888; line-height: 1.4; }
+    .tags { margin-top: 8px; }
+    .tag { display: inline-block; background: #333; padding: 2px 8px; border-radius: 3px; font-size: 10px; margin-right: 4px; text-transform: uppercase; }
+    .tag.ethdenver { background: #4527a0; color: #e1bee7; }
+    .tag.coinfello { background: #1565c0; color: #bbdefb; }
+    .tag.travelmoney { background: #2e7d32; color: #c8e6c9; }
+    .tag.decision { background: #c62828; color: #ffcdd2; }
+    .tag.personal { background: #6d4c41; color: #d7ccc8; }
+    .footer { font-size: 12px; color: #555; margin-top: 20px; padding-top: 20px; border-top: 1px solid #333; }
+    .countdown { color: #fdd835; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <h1>⚡ Zeek Kanban</h1>
+  <p class="subtitle">David's Projects — Auto-refreshes every 30s</p>
+  
+  <div class="board">
+    <div class="column blocked">
+      <div class="column-header">🔴 BLOCKED <span class="count">1</span></div>
+      <div class="card">
+        <div class="card-title">Public launch vs conference-only?</div>
+        <div class="card-meta">Need decision on whether EthDenver is public launch or UTM-gated for attendees only</div>
+        <div class="tags"><span class="tag decision">Decision</span><span class="tag ethdenver">EthDenver</span></div>
+      </div>
+    </div>
+    
+    <div class="column progress">
+      <div class="column-header">🟡 IN PROGRESS <span class="count">3</span></div>
+      <div class="card">
+        <div class="card-title">Opening ceremony script</div>
+        <div class="card-meta">~2 min BuffiBot + T.J. Miller roast. BuffiBot = Bufficorn AI spin.</div>
+        <div class="tags"><span class="tag ethdenver">EthDenver</span><span class="tag coinfello">CoinFello</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">BuffiBot conference instance</div>
+        <div class="card-meta">Separate AI agent loaded with attendee data, events, hackathon info, vendor info</div>
+        <div class="tags"><span class="tag ethdenver">EthDenver</span><span class="tag coinfello">CoinFello</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Booth design & planning</div>
+        <div class="card-meta">10'x10' confirmed. Design TBD.</div>
+        <div class="tags"><span class="tag ethdenver">EthDenver</span></div>
+      </div>
+    </div>
+    
+    <div class="column next">
+      <div class="column-header">🟢 UP NEXT <span class="count">4</span></div>
+      <div class="card">
+        <div class="card-title">Demo script for booth</div>
+        <div class="card-meta">Not started. Need to define what we're showing.</div>
+        <div class="tags"><span class="tag ethdenver">EthDenver</span><span class="tag coinfello">CoinFello</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Closing ceremony script</div>
+        <div class="card-meta">BuffiBot announces availability in ETHDenver app</div>
+        <div class="tags"><span class="tag ethdenver">EthDenver</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">CoinFello launch checklist</div>
+        <div class="card-meta">Define full scope — is EthDenver THE launch?</div>
+        <div class="tags"><span class="tag coinfello">CoinFello</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">TravelMoney launch checklist</div>
+        <div class="card-meta">Scope TBD with David</div>
+        <div class="tags"><span class="tag travelmoney">TravelMoney</span></div>
+      </div>
+    </div>
+    
+    <div class="column backlog">
+      <div class="column-header">⚪ BACKLOG <span class="count">2</span></div>
+      <div class="card">
+        <div class="card-title">Side events coordination</div>
+        <div class="card-meta">Scope unknown — need details from David</div>
+        <div class="tags"><span class="tag ethdenver">EthDenver</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Personal/family support</div>
+        <div class="card-meta">Ways to help David + Julie + Yuna</div>
+        <div class="tags"><span class="tag personal">Personal</span></div>
+      </div>
+    </div>
+    
+    <div class="column done">
+      <div class="column-header">✅ DONE <span class="count">1</span></div>
+      <div class="card">
+        <div class="card-title">Foundation setup</div>
+        <div class="card-meta">Identity, User, Soul, Kanban, Memory — Day 1 complete</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <p><span class="countdown">17 days until EthDenver</span> (Feb 17-21, 2026)</p>
+    <p>Last updated: 2026-01-31 · Managed by Zeek</p>
+  </div>
+</body>
+</html>
